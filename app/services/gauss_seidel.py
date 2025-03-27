@@ -1,10 +1,10 @@
 import numpy as np
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 
 def gauss_seidel(A: List[List[float]], b: List[float],
                 x0: Optional[List[float]] = None,
                 max_iterations: int = 100,
-                tolerance: float = 1e-10) -> Tuple[List[float], int, float, bool]:
+                tolerance: float = 1e-10) -> Tuple[List[float], int, float, bool, List[Dict[str, Any]]]:
     """
     Resuelve un sistema de ecuaciones lineales usando el método de Gauss-Seidel.
 
@@ -21,6 +21,7 @@ def gauss_seidel(A: List[List[float]], b: List[float],
         - iterations: Número de iteraciones realizadas
         - error: Error final
         - converged: Si el método convergió
+        - iteration_history: Historial de iteraciones
     """
     A = np.array(A, dtype=float)
     b = np.array(b, dtype=float)
@@ -36,6 +37,9 @@ def gauss_seidel(A: List[List[float]], b: List[float],
     iterations = 0
     error = float('inf')
     converged = False
+
+    # Historial de iteraciones
+    iteration_history = []
 
     # Iteración de Gauss-Seidel
     for iteration in range(max_iterations):
@@ -55,9 +59,16 @@ def gauss_seidel(A: List[List[float]], b: List[float],
         error = np.linalg.norm(x - x_old, np.inf)
         iterations += 1
 
+        # Guardar el estado de esta iteración
+        iteration_history.append({
+            "iteration": iteration + 1,
+            "solution": x.tolist(),
+            "error": float(error)
+        })
+
         # Verifica la convergencia
         if error < tolerance:
             converged = True
             break
 
-    return x.tolist(), iterations, float(error), converged
+    return x.tolist(), iterations, float(error), converged, iteration_history

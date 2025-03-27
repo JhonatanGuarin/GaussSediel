@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from .models import GaussSeidelRequest, GaussSeidelResponse
+from .models import GaussSeidelRequest, GaussSeidelResponse, IterationData
 from .services.gauss_seidel import gauss_seidel
 from .utils.matrix_utils import MatrixValidator, convergence_check
 import numpy as np
@@ -14,13 +14,13 @@ async def solve(request: GaussSeidelRequest):
 
         # Verificar criterios de convergencia
         convergence_info = validator.check_gauss_seidel_convergence()
+        warnings = convergence_info.get("warnings", [])
 
-        if not convergence_info["will_converge"]:
-            warnings = "; ".join(convergence_info["warnings"])
-            raise HTTPException(status_code=400, detail=f"El método puede no converger: {warnings}")
+        # Obtener comparación con Jacobi
+        comparison_with_jacobi = validator.compare_with_jacobi()
 
         # Resolver usando el método de Gauss-Seidel
-        solution, iterations, error, converged = gauss_seidel(
+        solution, iterations, error, converged, iteration_history = gauss_seidel(
             request.A,
             request.b,
             request.x0,
@@ -28,11 +28,24 @@ async def solve(request: GaussSeidelRequest):
             request.tolerance
         )
 
+        # Convertir el historial de iteraciones al formato adecuado
+        formatted_history = [
+            IterationData(
+                iteration=item["iteration"],
+                solution=item["solution"],
+                error=item["error"]
+            ) for item in iteration_history
+        ]
+
         return GaussSeidelResponse(
             solution=solution,
             iterations=iterations,
             error=error,
-            converged=converged
+            converged=converged,
+            iteration_history=formatted_history,
+            warnings=warnings,
+            convergence_details=convergence_info.get("details", {}),
+            comparison_with_jacobi=comparison_with_jacobi
         )
 
     except ValueError as e:
